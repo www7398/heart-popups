@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>弹窗沿爱心线依次弹出</title>
+<style>html,body{margin:0;padding:0;background:#fff7f9}body{max-width:960px;margin:0 auto;padding:24px;box-sizing:border-box}</style>
+</head>
+<body>
+<div id="heart-pop-demo">
+  <style>
+    #heart-pop-demo { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+    #heart-pop-demo .hp-stage { position: relative; width: 100%; aspect-ratio: 880 / 700;
+      background: linear-gradient(160deg, #fff0f3, #ffe3ea 55%, #ffd6e2);
+      border-radius: 16px; overflow: hidden; }
+    #heart-pop-demo .hp-card { position: absolute; width: 122px; height: 40px; margin: -20px 0 0 -61px;
+      background: #fff; border: 1.5px solid #ffb1c5; border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(214, 51, 108, .22);
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      font-size: 13px; font-weight: 500; color: #d6336c; white-space: nowrap;
+      transform: scale(0); animation: hp-pop .4s cubic-bezier(.34, 1.6, .64, 1) forwards; }
+    #heart-pop-demo .hp-card b { color: #ff5c8a; font-weight: 500; }
+    #heart-pop-demo.hp-sm .hp-card { width: 92px; height: 32px; margin: -16px 0 0 -46px;
+      font-size: 11px; border-radius: 8px; border-width: 1px; }
+    @keyframes hp-pop { to { transform: scale(1); } }
+    #heart-pop-demo .hp-done-card { position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%) scale(0); opacity: 0;
+      background: #d6336c; color: #fff; border-radius: 12px; padding: 10px 18px;
+      font-size: 14px; font-weight: 500; white-space: nowrap;
+      box-shadow: 0 6px 18px rgba(214, 51, 108, .35);
+      transition: transform .35s cubic-bezier(.34, 1.6, .64, 1), opacity .35s; }
+    #heart-pop-demo.hp-done .hp-done-card { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    #heart-pop-demo .hp-bar { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+    #heart-pop-demo .hp-replay { border: 0; background: #d6336c; color: #fff; border-radius: 8px;
+      padding: 7px 16px; font-size: 13px; font-weight: 500; }
+    #heart-pop-demo .hp-note { font-size: 13px; color: #8a4a5e; }
+    @media (prefers-reduced-motion: reduce) {
+      #heart-pop-demo .hp-card { animation: none; transform: scale(1); }
+      #heart-pop-demo .hp-done-card { transition: none; }
+    }
+  </style>
+  <div class="hp-stage"></div>
+  <div class="hp-bar">
+    <button class="hp-replay cursor-interaction" type="button">♥ 重放</button>
+    <span class="hp-note">72 个小弹窗 × 90 毫秒/个，沿心形曲线依次弹出</span>
+  </div>
+  <script>
+  (function () {
+    var root = document.getElementById('heart-pop-demo');
+    var stage = root.querySelector('.hp-stage');
+    var PHRASES = ["我想你了", "我喜欢你", "超级想你", "今天也要开心", "心里全是你",
+                   "见到你好开心", "晚安好梦", "你是最好的", "永结同心", "♥"];
+    var N = 72, STEP_MS = 90, timer = null;
+
+    function points(count, padX, padY) {
+      var pts = [];
+      for (var i = 0; i < count; i++) {
+        var t = 2 * Math.PI * i / N;
+        pts.push({
+          x: 16 * Math.pow(Math.sin(t), 3),
+          y: 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)
+        });
+      }
+      var xs = pts.map(function (p) { return p.x; });
+      var ys = pts.map(function (p) { return p.y; });
+      var minx = Math.min.apply(null, xs), maxx = Math.max.apply(null, xs);
+      var miny = Math.min.apply(null, ys), maxy = Math.max.apply(null, ys);
+      var sw = stage.clientWidth, sh = stage.clientHeight;
+      var s = Math.min((sw - padX) / (maxx - minx), (sh - padY) / (maxy - miny));
+      return pts.map(function (p) {
+        return {
+          left: 50 + (p.x - (minx + maxx) / 2) * s / sw * 100,
+          top: 50 - (p.y - (miny + maxy) / 2) * s / sh * 100
+        };
+      });
+    }
+
+    function build() {
+      clearTimeout(timer);
+      stage.innerHTML = '';
+      root.classList.remove('hp-done');
+      var small = stage.clientWidth < 480;
+      root.classList.toggle('hp-sm', small);
+      var n = small ? 40 : N;
+      root.querySelector('.hp-note').textContent =
+        n + ' 个小弹窗 × ' + STEP_MS + ' 毫秒/个，沿心形曲线依次弹出';
+      var padX = small ? 64 : 150, padY = small ? 60 : 100;
+      var pts = points(n, padX, padY);
+      pts.forEach(function (p, i) {
+        var c = document.createElement('div');
+        c.className = 'hp-card';
+        c.style.left = p.left + '%';
+        c.style.top = p.top + '%';
+        c.style.animationDelay = (i * STEP_MS) + 'ms';
+        c.innerHTML = '<b>♥</b>' + PHRASES[i % PHRASES.length];
+        stage.appendChild(c);
+      });
+      var done = document.createElement('div');
+      done.className = 'hp-done-card';
+      done.textContent = '画好啦 ♥ 弹窗沿爱心线走了一整圈';
+      stage.appendChild(done);
+      timer = setTimeout(function () { root.classList.add('hp-done'); }, n * STEP_MS + 200);
+    }
+
+    root.querySelector('.hp-replay').addEventListener('click', build);
+    build();
+  })();
+  </script>
+</div>
+
+</body>
+</html>
